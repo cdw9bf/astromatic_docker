@@ -1,0 +1,83 @@
+FROM opencv4base:latest
+
+RUN mkdir /astronomy
+WORKDIR /astronomy
+
+RUN apt-get -y update --fix-missing \
+	&& apt-get -y upgrade \
+	&& apt-get -y install libplplot-ada-dev
+
+# Install Dependency for SCAMP
+RUN wget http://cdsarc.u-strasbg.fr/ftp/pub/sw/cdsclient.tar.gz \
+	&& tar xvfz cdsclient.tar.gz \
+	&& cd cdsclient-3.84 \
+	&& ./configure \
+	&& make \
+	&& make install \
+	&& cd ../. 
+
+# Install plplot and gcc-6
+RUN apt-get -y install libplplot-dev \
+	&& apt-get -y install fftw-dev \
+	&& apt-get -y install gcc-6 g++-6 g++-6-multilib gfortran-6 \
+	&& export CC="/usr/bin/gcc-6"
+
+# Link Stuff
+RUN ln -s /usr/include/x86_64-linux-gnu/clapack.h /usr/local/include/clapack.h
+
+# Install SCAMP
+RUN wget https://www.astromatic.net/download/scamp/scamp-2.0.4.tar.gz \
+	&& tar xzvf scamp-2.0.4.tar.gz \
+	&& rm scamp-2.0.4.tar.gz \
+	&& cd scamp-2.0.4 \
+	&& ./configure  --with-atlas-incdir=/usr/local/include --with-fftw-incdir=/usr/local/include --enable-static --enable-threads \
+	&& make \
+	&& make install \
+	&& cd ../. \
+	&& export CC="/usr/bin/gcc" 
+
+# Install Sextractor
+RUN wget  https://www.astromatic.net/download/sextractor/sextractor-2.19.5.tar.gz \
+	&& tar xzvf sextractor-2.19.5.tar.gz \
+	&& rm sextractor-2.19.5.tar.gz \
+	&& cd sextractor-2.19.5 \
+	&& ./configure \
+	&& make \
+	&& make install \
+	&& cd ../. 
+
+# Install SWARP
+RUN wget https://www.astromatic.net/download/swarp/swarp-2.38.0.tar.gz \
+	&& tar xzvf swarp-2.38.0.tar.gz \
+	&& rm swarp-2.38.0.tar.gz \
+	&& cd swarp-2.38.0 \
+	&& ./configure \
+	&& make \
+	&& make install \
+	&& cd ../.
+
+
+# Set up jupyter notebook server
+RUN pip3 install virtualenv \
+	&& mkdir notebooks \
+	&& cd notebooks \
+	&& pip3 install jupyter \
+	&& pip3 install astropy pandas \
+	&& jupyter notebook --generate-config \
+	&& pip3 install matplotlib \
+	&& pip3 install astroscrappy
+
+# Echo the sha1 password to the config. This password is "password"
+RUN echo "c.NotebookApp.password = u'sha1:b4a13ad8d080:c18a11a0e4c8b8cb74681f9f28d54fbe02d43ebc'" >> /root/.jupyter/jupyter_notebook_config.py
+
+
+RUN git clone https://github.com/cdw9bf/astromatic_wrapper.git \
+	&& cd astromatic_wrapper \
+	&& python3 setup.py install \
+	&& cd ../.
+
+
+ENTRYPOINT ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]
+
+
+

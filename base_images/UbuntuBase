@@ -1,0 +1,13 @@
+FROM ubuntu
+
+# Install General System Dependencies
+RUN apt-get -y update --fix-missing \
+	&& apt-get -y install curl \
+	&& apt-get -y install python3-pip \
+	&& apt-get -y install python3-dev \
+	&& apt-get -y install wget \
+	&& apt-get -y install git \
+	&& apt-get -y install vim 
+
+#ENTRYPOINT ["sh", "-c", "echo Hello"]
+
